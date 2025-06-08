@@ -1,8 +1,8 @@
-# 🗓️ Symfony Event Management API
+# Symfony Event Management API
 
 A RESTful API built with Symfony for event booking system. Attendees will book the events. 
 
-## 🚀 Features
+## Features
 - Managing Events
   - Users should be able to create, update, delete, and list events.
 -Managing Attendees
@@ -15,7 +15,7 @@ A RESTful API built with Symfony for event booking system. Attendees will book t
   - Attendees should be able to register without authentication
 ---
 
-## 📦 Tech Stack
+##  Tech Stack
 
 - PHP 8.2.12
 - Symfony 5.11.0
@@ -26,7 +26,7 @@ A RESTful API built with Symfony for event booking system. Attendees will book t
 
 ---
 
-## 🛠 Installation
+## Installation
 
 ### 1. Clone the repository
 
@@ -66,3 +66,17 @@ symfony serve
 ```bash
 php bin/phpunit
 ```
+
+## Authentication and Authorization
+
+```
+Authentication & Authorization Design:
+ 
+ - API consumers managing events must authenticate using JWT tokens.
+ - Attendees register for events without any authentication.
+ - Access is controlled via Symfony security firewalls and access_control rules:
+     - Public POST access to /api/events/{eventId}/attendees for attendee registration.
+     - All /api/events endpoints require authenticated users with USER_ROLE.
+ 
+ This separation ensures secure management of events while allowing open attendee registration.
+ ```
