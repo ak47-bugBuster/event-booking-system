@@ -1,7 +1,12 @@
 <?php
-
+/*
+ * Author: Akshaya Bhandare
+ * Page: Event Booking operations
+ * Created At: 07-Jun-2025 
+*/
 namespace App\Controller;
 
+use App\DTO\BookingDTO;
 use App\Entity\Booking;
 use App\Entity\Event;
 use App\Entity\Attendee;
@@ -10,55 +15,65 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\HttpFoundation\Response;
 
 #[Route('/api/bookings')]
 class BookingController extends AbstractController
 {
     public function __construct(
-        private readonly EntityManagerInterface $em
+        private readonly EntityManagerInterface $em,
+        private readonly ValidatorInterface $validator,
+        private readonly SerializerInterface $serializer
     ) {}
 
+    // Event booking function added here
     #[Route('', name: 'book_event', methods: ['POST'])]
     public function book(Request $request): JsonResponse
     {
-        // Decode JSON request content safely
         try {
             $data = $request->toArray();
-        } catch (\Exception $e) {
-            return $this->json(['error' => 'Invalid JSON'], 400);
+        } catch (\Exception) {
+            return $this->errorResponse('Invalid JSON', Response::HTTP_BAD_REQUEST);
         }
 
-        $eventId = $data['event_id'] ?? null;
-        $attendeeId = $data['attendee_id'] ?? null;
+        $dto = new BookingDTO($data);
 
-        if (!$eventId || !$attendeeId) {
-            return $this->json(['error' => 'event_id and attendee_id are required'], 400);
+        // Validate DTO
+        $violations = $this->validator->validate($dto);
+        if (count($violations) > 0) {
+            $errors = [];
+            foreach ($violations as $violation) {
+                $errors[$violation->getPropertyPath()] = $violation->getMessage();
+            }
+            return $this->errorResponse($errors, Response::HTTP_BAD_REQUEST);
         }
 
-        $event = $this->em->getRepository(Event::class)->find($eventId);
+        $event = $this->em->getRepository(Event::class)->find($dto->event_id);
         if (!$event) {
-            return $this->json(['error' => 'Event not found'], 404);
+            return $this->errorResponse('Event not found', Response::HTTP_NOT_FOUND);
         }
 
-        $attendee = $this->em->getRepository(Attendee::class)->find($attendeeId);
+        $attendee = $this->em->getRepository(Attendee::class)->find($dto->attendee_id);
         if (!$attendee) {
-            return $this->json(['error' => 'Attendee not found'], 404);
+            return $this->errorResponse('Attendee not found', Response::HTTP_NOT_FOUND);
         }
 
-        // Check for duplicate booking
+        // Duplicate booking check
         $existingBooking = $this->em->getRepository(Booking::class)
             ->findOneBy(['event' => $event, 'attendee' => $attendee]);
         if ($existingBooking) {
-            return $this->json(['error' => 'Duplicate booking not allowed'], 409);
+            return $this->errorResponse('Duplicate booking not allowed', Response::HTTP_CONFLICT);
         }
 
-        // Check event capacity to prevent overbooking
-        $bookedCount = count($event->getBookings());
+        // Capacity check
+        $bookedCount = $this->em->getRepository(Booking::class)->count(['event' => $event]);
         if ($bookedCount >= $event->getCapacity()) {
-            return $this->json(['error' => 'Event is fully booked'], 409);
+            return $this->errorResponse('Event is fully booked', Response::HTTP_CONFLICT);
         }
 
-        // Create and persist new booking
+        // Create booking
         $booking = new Booking();
         $booking->setEvent($event);
         $booking->setAttendee($attendee);
@@ -66,9 +81,20 @@ class BookingController extends AbstractController
         $this->em->persist($booking);
         $this->em->flush();
 
-        return $this->json(
-            ['message' => 'Booking successful', 'booking_id' => $booking->getId()],
-            201
-        );
+        $responseData = [
+            'message' => 'Booking successful',
+            'booking_id' => $booking->getId(),
+        ];
+
+        // Use serializer normalization
+        $json = $this->serializer->serialize($responseData, 'json');
+
+        return new JsonResponse($json, Response::HTTP_CREATED, [], true);
+    }
+
+    private function errorResponse(mixed $errors, int $statusCode): JsonResponse
+    {
+        $data = is_array($errors) ? ['errors' => $errors] : ['error' => $errors];
+        return new JsonResponse($data, $statusCode);
     }
 }

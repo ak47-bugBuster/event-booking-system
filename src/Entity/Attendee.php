@@ -1,5 +1,9 @@
 <?php
-
+/*
+ * Author: Akshaya Bhandare
+ * Page: Entity for attendee table
+ * Created At: 07-Jun-2025 
+*/
 namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
@@ -12,16 +16,13 @@ class Attendee
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(type: "integer")]
+    #[ORM\Column(type: 'integer')]
     private ?int $id = null;
 
-    #[ORM\Column(type: "string", length: 255)]
-    #[Assert\NotBlank]
+    #[ORM\Column(type: 'string', length: 255)]
     private string $name;
 
-    #[ORM\Column(type: "string", length: 255, unique: true)]
-    #[Assert\NotBlank]
-    #[Assert\Email]
+    #[ORM\Column(type: 'string', length: 255, unique: true)]
     private string $email;
 
     public function getId(): ?int
@@ -29,7 +30,7 @@ class Attendee
         return $this->id;
     }
 
-    public function getName(): ?string
+    public function getName(): string
     {
         return $this->name;
     }
@@ -40,7 +41,7 @@ class Attendee
         return $this;
     }
 
-    public function getEmail(): ?string
+    public function getEmail(): string
     {
         return $this->email;
     }

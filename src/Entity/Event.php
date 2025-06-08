@@ -1,12 +1,19 @@
 <?php
-
+/*
+ * Author: Akshaya Bhandare
+ * Page: Entity for event table
+ * Created At: 07-Jun-2025 
+*/
 namespace App\Entity;
 
+use App\Entity\Booking;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Intl\Countries;
 use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
+use Symfony\Component\Serializer\Annotation\Groups;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
-use App\Entity\Booking;
 
 #[ORM\Entity]
 #[ORM\Table(name: "event")]
@@ -15,40 +22,64 @@ class Event
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: "integer")]
+    #[Groups(['event:list'])]
     private ?int $id = null;
 
     #[ORM\Column(type: "string", length: 255)]
     #[Assert\NotBlank]
+    #[Assert\Length(min: 3, max: 255)]
+    #[Groups(['event:list'])]
     private string $title;
 
     #[ORM\Column(type: "text")]
     #[Assert\NotBlank]
+    #[Assert\Length(min: 10)]
+    #[Groups(['event:list'])]
     private string $description;
 
     #[ORM\Column(type: "string", length: 100)]
     #[Assert\NotBlank]
+    #[Assert\Length(min: 3, max: 100)]
+    #[Assert\Callback([self::class, 'validateLocation'])]
+    #[Groups(['event:list'])]
     private string $location;
 
     #[ORM\Column(type: "integer")]
     #[Assert\NotBlank]
     #[Assert\Positive]
+    #[Groups(['event:list'])]
     private int $capacity;
 
     #[ORM\Column(type: "datetime")]
-    #[Assert\NotBlank]
-    private \DateTimeInterface $startsAt;
+    #[Assert\NotNull]
+    #[Assert\Type(type: \DateTimeInterface::class)]
+    private ?\DateTimeInterface $startsAt = null;
 
     #[ORM\Column(type: "datetime")]
-    #[Assert\NotBlank]
-    #[Assert\GreaterThan(propertyPath: "startsAt", message: "End date must be after start date.")]
-    private \DateTimeInterface $endsAt;
+    #[Assert\NotNull]
+    #[Assert\Type(type: \DateTimeInterface::class)]
+    #[Assert\GreaterThan(
+        propertyPath: "startsAt",
+        message: "End date must be after start date."
+    )]
+    private ?\DateTimeInterface $endsAt = null;
 
-    #[ORM\OneToMany(targetEntity: Booking::class, mappedBy: "event", cascade: ["remove"])]
+    #[ORM\OneToMany(mappedBy: "event", targetEntity: Booking::class, cascade: ["remove"])]
     private Collection $bookings;
 
     public function __construct()
     {
         $this->bookings = new ArrayCollection();
+    }
+
+    public static function validateLocation(string $location, ExecutionContextInterface $context): void
+    {
+        $countries = array_values(Countries::getNames());
+
+        if (!in_array($location, $countries, true)) {
+            $context->buildViolation('Please enter a valid country name.')
+                ->addViolation();
+        }
     }
 
     public function getId(): ?int
@@ -105,7 +136,7 @@ class Event
         return $this->startsAt;
     }
 
-    public function setStartsAt(\DateTimeInterface $startsAt): self
+    public function setStartsAt(?\DateTimeInterface $startsAt): self
     {
         $this->startsAt = $startsAt;
         return $this;
@@ -116,7 +147,7 @@ class Event
         return $this->endsAt;
     }
 
-    public function setEndsAt(\DateTimeInterface $endsAt): self
+    public function setEndsAt(?\DateTimeInterface $endsAt): self
     {
         $this->endsAt = $endsAt;
         return $this;

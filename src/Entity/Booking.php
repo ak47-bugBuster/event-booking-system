@@ -1,5 +1,9 @@
 <?php
-
+/*
+ * Author: Akshaya Bhandare
+ * Page: Entity for booking table
+ * Created At: 07-Jun-2025 
+*/
 namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
@@ -24,13 +28,11 @@ class Booking
     #[ORM\JoinColumn(nullable: false)]
     private Attendee $attendee;
 
-    // Maps to created_at column
     #[ORM\Column(type: "datetime")]
     private \DateTimeInterface $createdAt;
 
     public function __construct()
     {
-        // Set createdAt to current datetime by default
         $this->createdAt = new \DateTime();
     }
 
